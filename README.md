@@ -1,147 +1,98 @@
-# <img src="src/public/assets/logo.png" height="32px" alt="" /> Drift
+![logo](https://i.imgur.com/W22RFJZ.png)
 
-> **Note:** This branch is where all work is being done to refactor to the Next.js 13 app directory and React Server Components.
+A minimal, self-hosted paste platform
 
-Drift is a self-hostable Gist clone. It's in beta, but is completely functional.
+# Features
+* Self-contained system without external database dependencies
+* Automatic programming language detection
+* Optional on-disk encryption
+* Optional single use pastes
+* Optional expiration date
+* QR code generation
+* Theme system
+* IP/network whitelisting and blocking
+* Endpoint rate limiting
+* JSON API
+* Fully configurable via environment variables
+* Included script for uploading files/content from stdin
 
-You can try a demo at https://drift.lol. The demo is built on main but has no database, so files and accounts can be wiped at any time.
 
-If you want to contribute, need support, or want to stay updated, you can join the IRC channel at #drift on irc.libera.chat or [reach me on twitter](https://twitter.com/Max_Leiter). If you don't have an IRC client yet, you can use a webclient [here](https://demo.thelounge.chat/#/connect?join=%23drift&nick=drift-user&realname=Drift%20User).
+## Screenshots
+### Browser
+![home](https://i.imgur.com/P3BSv9d.png)
+![new](https://i.imgur.com/5YiQ3GB.png)
+![view](https://i.imgur.com/4bkPKNP.png)
+### Dark
+![dark](https://i.imgur.com/SXeSa5d.png)
+### CLI
+![screenshot5](https://i.imgur.com/kV7q1Zv.png)
 
-Drift is built with Next.js 13, React Server Components, [shadcn/ui](https://github.com/shadcn/ui), and [Prisma](https://prisma.io/).
+# Installation
+### Docker
+It is highly recommended that you use the official Docker image to run Pastey. To do so, simply run:
+```
+$ docker run -d -p 5000:5000 -v /path/to/local/dir:/app/data cesura/pastey:latest
+```
+Change **/path/to/local/dir** to a local folder you would like to use for persistent paste storage. It will be mounted in the container at **/app/data**.
 
-<hr />
+Pastey will then be accessible at *http://localhost:5000*
 
-**Contents:**
+### Docker (slim image OR non-AVX processor)
+If you're interested in a slimmer image (or your processor does not have support for AVX instructions required by Tensorflow), a slim image without language detection is also maintained:
+```
+$ docker run -d -p 5000:5000 -v /path/to/local/dir:/app/data cesura/pastey:latest-slim
+```
 
-- [Setup](#setup)
-  - [Development](#development)
-  - [Production](#production)
-- [Environment variables](#environment-variables)
-- [Running with pm2](#running-with-pm2)
-- [Running with Docker](#running-with-docker)
-- [Current status](#current-status)
+### docker-compose
+If you prefer to use docker-compose:
+```
+$ wget https://raw.githubusercontent.com/Cesura/pastey/main/docker-compose.yml && docker-compose up -d
+```
+Note that this must be modified if you wish to use a local directory for storage, rather than a Docker volume.
 
-## Setup
+### Local
+#### With language detection
+Requirements:
+* Python 3.8
+* AVX-enabled processor (or a Python environment configured to use Anaconda's Tensorflow)
 
-### Development
+```
+$ git clone https://github.com/Cesura/pastey.git && cd pastey && mkdir ./data
+$ pip3 install -r requirements.txt
+$ python3 app.py 
+```
 
-In the root directory, run `pnpm i`. If you need `pnpm`, you can download it [here](https://pnpm.io/installation).
-You can run `pnpm dev` in `client` for file watching and live reloading.
+#### Without language detection
+If you prefer to not use the language detection feature, use the included **patch_no_tensorflow.sh** script to remove the guesslang requirements:
+```
+$ git clone https://github.com/Cesura/pastey.git && cd pastey && mkdir ./data
+$ ./patch_no_tensorflow.sh && pip3 install -r requirements.txt
+$ python3 app.py 
+```
 
-To work with [prisma](prisma.io/), you can use `pnpm prisma` or `pnpm exec prisma` to interact with the database.
+# Configuration
+Here is a list of the available configuration options:
+| Environment Variable        | config.py Variable   | Description                                                                                                                                                                                      | Default Value                                                             |
+|-----------------------------|----------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------|
+| PASTEY_DATA_DIRECTORY       | data_directory       | Local directory for paste storage                                                                                                                                                                | ./data                                                                    |
+| PASTEY_LISTEN_ADDRESS       | listen_address       | Address to listen on                                                                                                                                                                             | 0.0.0.0                                                                   |
+| PASTEY_LISTEN_PORT          | listen_port          | Port to listen on                                                                                                                                                                                | 5000                                                                      |
+| PASTEY_USE_WHITELIST        | use_whitelist        | Enable/disable whitelisting for admin tasks (view recent, delete, config)                                                                                                                        | True                                                                      |
+| PASTEY_WHITELIST_CIDR       | whitelist_cidr       | List of whitelisted IP addresses or networks (in CIDR format). When passed as an environment variable, it should be a comma-separated list.                                                      | [ '127.0.0.1/32' ,  '10.0.0.0/8' ,  '172.16.0.0/12' ,  '192.168.0.0/16' ] |
+| PASTEY_BLACKLIST_CIDR       | blacklist_cidr       | List of blocked IP addresses or networks (in CIDR format). When passed as an environment variable, it should be a comma-separated list.                                                          | []                                                                        |
+| PASTEY_RESTRICT_PASTING     | restrict_pasting     | Enable/disable restricting of pasting to whitelisted users                                                                                                                                       | False                                                                     |
+| PASTEY_RATE_LIMIT           | rate_limit           | Rate limit for pasting, for non-whitelisted users                                                                                                                                                | 5/hour                                                                    |
+| PASTEY_GUESS_THRESHOLD      | guess_threshold      | Threshold for automatic language detection guesses. If a result is below this value, it is treated as Plaintext.                                                                                 | 0.20                                                                      |
+| PASTEY_RECENT_PASTES        | recent_pastes        | Number of recent pastes to show on the home page                                                                                                                                                 | 10                                                                        |
+| PASTEY_BEHIND_PROXY         | behind_proxy         | Inform Pastey if it is behind a reverse proxy (nginx, etc.). If this is the case, it will rely on HTTP headers X-Real-IP or X-Forwarded-For. NOTE: Make sure your proxy config sets these values | False                                                                     |
+| PASTEY_DEFAULT_THEME        | default_theme        | Select which theme Pastey should use by default. This is overridden by client options.                                                                                                           | Light                                                                     |
+| PASTEY_PURGE_INTERVAL       | purge_interval       | Purge interval (in seconds) for checking expired pastes in background thread                                                                                                                     | 3600                                                                      |
+| PASTEY_FORCE_SHOW_RECENT    | force_show_recent    | Show recent pastes on the home page, even to non-whitelisted users (without delete button)                                                                                                       | False                                                                     |
+| PASTEY_IGNORE_GUESS         | ignore_guess         | Ignore these classifications for language detection                                                                                                                                              | ['TeX', 'SQL']                                                            |
+| PASTEY_SHOW_CLI_BUTTON      | show_cli_button      | Enable/disabling showing of CLI button on home page                                                                                                                                              | True                                                                      |
 
-### Production
-
-`pnpm build` will produce production code. `pnpm start` will start the Next.js server.
-
-### Environment Variables
-
-You can change these to your liking.
-
-`.env`:
-
-- `DRIFT_URL`: the URL of the drift instance.
-- `DATABASE_URL`: the URL to connect to your postgres instance. For example, `postgresql://user:password@localhost:5432/drift`.
-- `WELCOME_CONTENT`: a markdown string that's rendered on the home page
-- `WELCOME_TITLE`: the file title for the post on the homepage.
-- `ENABLE_ADMIN`: the first account created is an administrator account
-- `REGISTRATION_PASSWORD`: the password required to register an account. If not set, no password is required.
-- `NODE_ENV`: defaults to development, can be `production`
-
-#### Auth environment variables
-
-**Note:** Only credential auth currently supports the registration password, so if you want to secure registration, you must use only credential auth.
-
-- `GITHUB_CLIENT_ID`: the client ID for GitHub OAuth.
-- `GITHUB_CLIENT_SECRET`: the client secret for GitHub OAuth.
-- `NEXTAUTH_URL`: the URL of the drift instance. Not required if hosting on Vercel.
-- `CREDENTIAL_AUTH`: whether to allow username/password authentication. Defaults to `true`.
-
-## Running with pm2
-
-It's easy to start Drift using [pm2](https://pm2.keymetrics.io/).
-First, add the `.env` file with your values (see the above section for the required options).
-
-Then, use the following command to start the server:
-
-- `pnpm build && pm2 start pnpm --name drift --interpreter bash -- start`
-
-Refer to pm2's docs or `pm2 help` for more information.
-
-## Running with Docker
-
-## Running with systemd
-
-_**NOTE:** We assume that you know how to enable user lingering if you don't want to use the systemd unit as root_
-
-- As root
-  - Place the following systemd unit in ___/etc/systemd/system___ and name it _drift.service_
-  - Replace any occurrence of ___`$USERNAME`___ with the shell username of the user that will be running the Drift server
-
-  ```
-  ##########
-  # Drift Systemd Unit (Global)
-  ##########
-  [Unit]
-  Description=Drift Server (Global)
-  After=default.target
-  
-  [Service]
-  User=$USERNAME
-  Group=$USERNAME
-  Type=simple
-  WorkingDirectory=/home/$USERNAME/Drift
-  ExecStart=/usr/bin/pnpm start
-  Restart=on-failure
-  
-  [Install]
-  WantedBy=default.target
-  ```
-- As a nomal user
-  - Place the following systemd unit inside ___/home/user/.config/systemd/user___ and name it _drift_user.service_
-  - Replace any occurrence of ___`$USERNAME`___ with the shell username of the user that will be running the Drift server
-
-  ```
-  ##########
-  # Drift Systemd Unit (User)
-  ##########
-  [Unit]
-  Description=Drift Server (User)
-  After=default.target
-  
-  [Service]
-  Type=simple
-  WorkingDirectory=/home/$USERNAME/Drift
-  ExecStart=/usr/bin/pnpm start
-  Restart=on-failure
-  
-  [Install]
-  WantedBy=default.target
-  ```
-  
-## Current status
-
-Drift is a work in progress. Below is a (rough) list of completed and envisioned features. If you want to help address any of them, please let me know regardless of your experience and I'll be happy to assist.
-
-- [x] Next.js 13 `app` directory
-- [x] creating and sharing private, public, password-protected, and unlisted posts
-  - [x] syntax highlighting
-  - [x] expiring posts
-- [x] responsive UI
-- [x] user auth
-  - [ ] SSO via HTTP header (Issue: [#11](https://github.com/MaxLeiter/Drift/issues/11))
-  - [x] SSO via GitHub OAuth
-- [x] downloading files (individually and entire posts)
-- [x] password protected posts
-- [x] postgres database
-- [x] administrator account / settings
-- [x] docker-compose (PRs: [#13](https://github.com/MaxLeiter/Drift/pull/13), [#75](https://github.com/MaxLeiter/Drift/pull/75))
-  - [ ] publish docker builds
-- [ ] user settings
-- [ ] works enough with JavaScript disabled
-- [ ] in-depth documentation
-- [x] customizable homepage, so the demo can exist as-is but other instances can be built from the same source. Environment variable for the file contents?
-- [ ] fleshed out API
-- [ ] Swappable database backends
-- [ ] More OAuth providers
+### Docker configuration
+For Docker environments, it is recommended that the options be passed to the container on startup: 
+```
+$ docker run -d -p 5000:5000 -e PASTEY_LISTEN_PORT=80 -e PASTEY_BEHIND_PROXY="True" cesura/pastey:latest
+```

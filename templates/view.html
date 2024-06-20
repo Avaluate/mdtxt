@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta http-equiv="x-ua-compatible" content="ie=edge" />
+    <title>{{ paste.title }} | Pastey</title>
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.11.2/css/all.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" />
+    <link rel="stylesheet" href="/static/css/mdb.min.css" />
+    <link rel="stylesheet" href="/static/css/style.css" />
+    <link rel="stylesheet" href="/static/themes/{{ active_theme }}.css" />
+    <link rel="stylesheet" href="/static/css/highlight-{{ active_theme }}.css" />
+    <link rel="icon" type="image/x-icon" href="/static/img/favicon.ico"/>
+</head>
+<body>
+  <header>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg fixed-top bg-white pastey-navbar">
+      <div class="container-fluid">
+
+        <!-- Toggle button -->
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-mdb-toggle="collapse"
+          data-mdb-target="#pasteyNavbarContainer"
+          aria-controls="pasteyNavbarContainer"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <i class="fas fa-bars pastey-navbar-toggler"></i>
+        </button>
+
+        <!-- Navbar logo -->
+        <a class="navbar-brand" href="/">
+          <div class="pastey-logo" style="margin-top: -3px;"></div>
+        </a>
+
+        <div class="collapse navbar-collapse" id="pasteyNavbarContainer">
+          <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            <li class="nav-item active">
+              <a class="nav-link pastey-link" href="/">Home</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link pastey-link" href="/new" rel="nofollow">New Paste</a>
+            </li>
+            {% if whitelisted %}
+            <li class="nav-item">
+              <a class="nav-link pastey-link" href="/config">Config</a>
+            </li>
+            {% endif %}
+            <li class="nav-item dropdown">
+              <a
+                class="nav-link dropdown-toggle pastey-link"
+                href="#"
+                id="theme"
+                role="button"
+                data-mdb-toggle="dropdown"
+                aria-expanded="false"
+              >
+                Theme
+              </a>
+              <!-- Theme dropdown -->
+              <ul class="dropdown-menu pastey-dropdown" aria-labelledby="navbarDropdown">
+                {% for theme in themes %}
+                <li><a class="dropdown-item pastey-dropdown-item" href="#" onclick="setTheme('{{ theme }}');">{{ theme }}</a></li>
+                {% endfor %}
+                <li><hr class="dropdown-divider" /></li>
+                <li>
+                  <a class="dropdown-item pastey-dropdown-item" href="#" onclick="resetTheme();">Reset Theme</a>
+                </li>
+              </ul>
+            </li>
+          </ul>
+
+          <ul class="navbar-nav d-flex flex-row">
+            <li class="nav-item me-3 me-lg-0">
+              <a class="nav-link pastey-link" href="https://github.com/Cesura/pastey" rel="nofollow" target="_blank">
+                <i class="fab fa-github"></i>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+    <!-- Navbar -->
+
+    <!-- Jumbotron -->
+    <div id="intro" class="p-5 text-center pastey-header">
+      {% if paste.encrypted %}
+        <img src="/static/img/encrypted.png" width="30px" height="30px" /><br /><br />
+      {% else %}
+        <img src="/static/img/unencrypted.png" width="30px" height="30px" /><br /><br />
+      {% endif %}
+      <div class="pastey-title">
+        <h1 class="mb-3 h2" id="pastey-title">{{ paste.title }}</h1>
+      </div>
+      <span style="font-weight:bold;">Format: </span><span>{{ paste.language }}</span><br />      
+      {% if not paste.encrypted %}
+        <span>&nbsp;(<a href='{{ url }}/raw' target='_blank'><i class="fas fa-eye"></i>&nbsp;View Raw</a>)</span>
+      {% endif %}<br />
+
+      <span style="font-weight:bold;">Date: </span><span>{{ paste.timestamp }}</span><br />
+      {% if paste.expiration is defined and paste.expiration != "" %}
+        <span style="font-weight:bold;">Expires: </span><span>{{ paste.expiration }}</span><br />
+      {% endif %}<br />
+      <div class="row justify-content-md-center">
+        <div class="col-md-1" style="min-width: 140px;">
+          <button type="button" class="btn btn-secondary text-nowrap pastey-view-button"
+              data-mdb-toggle="modal"
+              data-mdb-target="#qrModal">
+              <i class="fas fa-qrcode"></i>&nbsp;&nbsp;&nbsp;QR Code
+          </button>
+        </div>
+        <div class="col-md-5">
+            <input class="form-control pastey-input pastey-view-url" id="paste-url" type="text" value="{{ url }}" readonly />
+        </div>
+        <div class="col-md-1">
+          <button type="button" class="btn btn-success text-nowrap pastey-view-button" onclick="copyToClipboard()"><i class="fas fa-copy"></i>&nbsp;&nbsp;&nbsp;Copy Link</button>
+        </div>
+      </div>
+      {% if paste.uses == 0 %}
+      <div class="row">
+        <div class="col-md-12">
+          <br /><span class="badge rounded-pill bg-warning text-dark">Warning: this paste has been set to single use. It will be deleted and unaccessible upon page reload.</span>
+        </div>
+      </div>
+      {% endif %}
+
+      <div id="pastey-decrypt-failed" style="display:none;"><br />
+        <span class="badge rounded-pill bg-danger">Error: could not decrypt paste with the given key</span>
+      </div>
+      <div id="pastey-decrypt-success" style="display:none;"><br />
+        <span class="badge rounded-pill bg-success">&nbsp;<i class="fas fa-lock-open"></i>&nbsp;&nbsp;&nbsp;Paste has been decrypted successfully&nbsp;</span>
+      </div>
+    </div>
+    <!-- Jumbotron -->
+  </header>
+  
+  <!--Main layout-->
+  <main class="my-5">
+      <div class="container">
+          <div class="row">
+              <div class="col-md-12 mb-4">
+                  {% if paste.language == "Plaintext" %}
+                  <pre><code class="plaintext" id="pastey-content">{{ paste.content }}</code></pre>
+                  {% else %}
+                  <pre><code id="pastey-content">{{ paste.content }}</code></pre>
+                  {% endif %}
+              </div>    
+          </div>
+
+        <!-- QR Modal -->
+        <div
+          class="modal fade"
+          id="qrModal"
+          tabindex="-1"
+          aria-labelledby="qrModalLabel"
+          aria-hidden="true"
+        >
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="qrModalLabel">QR Code</h5>
+              <button
+                type="button"
+                class="btn-close"
+                data-mdb-dismiss="modal"
+                aria-label="Close"
+              ></button>
+            </div>
+            <div class="modal-body">
+              <div id="qrcode" style="display: flex; justify-content: center;"></div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-danger" data-mdb-dismiss="modal">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!--Main layout-->
+
+  <!--JS-->
+  <script type="text/javascript" src="/static/js/jquery.min.js"></script>
+  <script type="text/javascript" src="/static/js/fernet.min.js"></script>
+  <script type="text/javascript" src="/static/js/common.js"></script>
+  <script type="text/javascript" src="/static/js/qrcode.min.js"></script>
+  <script type="text/javascript" src="/static/js/mdb.min.js"></script>
+  <script type="text/javascript" src="/static/js/highlight.min.js"></script>
+  <script type="text/javascript" src="/static/js/highlightjs-line-numbers.min.js"></script>
+
+  <!-- Decrypt paste and generate QR code -->
+  <script type="text/javascript">
+    $(document).ready(function() {
+        if (window.location.hash.length > 0) {
+            decryptPaste();
+        }
+
+        var qrcode = new QRCode("qrcode", {
+          text: $("#paste-url").val(),
+          width: 256,
+          height: 256,
+          colorDark : "#000000",
+          colorLight : "#ffffff",
+          correctLevel : QRCode.CorrectLevel.H
+        });
+    });
+  </script>
+  <script type="text/javascript">
+    hljs.highlightAll(); 
+    hljs.initLineNumbersOnLoad();
+  </script>
+  
+</body>
+</html>
