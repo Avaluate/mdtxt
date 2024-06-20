@@ -1,98 +1,78 @@
-![logo](https://i.imgur.com/W22RFJZ.png)
 
-A minimal, self-hosted paste platform
+![Screenshot](.github/index.png)
 
-# Features
-* Self-contained system without external database dependencies
-* Automatic programming language detection
-* Optional on-disk encryption
-* Optional single use pastes
-* Optional expiration date
-* QR code generation
-* Theme system
-* IP/network whitelisting and blocking
-* Endpoint rate limiting
-* JSON API
-* Fully configurable via environment variables
-* Included script for uploading files/content from stdin
+# MicroBin
 
+![Build](https://github.com/szabodanika/microbin/actions/workflows/rust.yml/badge.svg)
+[![crates.io](https://img.shields.io/crates/v/microbin.svg)](https://crates.io/crates/microbin)
+[![Docker Image](https://github.com/szabodanika/microbin/actions/workflows/release.yml/badge.svg)](https://hub.docker.com/r/danielszabo99/microbin)
+[![Docker Pulls](https://img.shields.io/docker/pulls/danielszabo99/microbin?label=Docker%20pulls)](https://img.shields.io/docker/pulls/danielszabo99/microbin?label=Docker%20pulls)
+[![Support Server](https://img.shields.io/discord/662017309162078267.svg?color=7289da&label=Discord&logo=discord&style=flat-square)](https://discord.gg/3DsyTN7T)
 
-## Screenshots
-### Browser
-![home](https://i.imgur.com/P3BSv9d.png)
-![new](https://i.imgur.com/5YiQ3GB.png)
-![view](https://i.imgur.com/4bkPKNP.png)
-### Dark
-![dark](https://i.imgur.com/SXeSa5d.png)
-### CLI
-![screenshot5](https://i.imgur.com/kV7q1Zv.png)
+MicroBin is a super tiny, feature rich, configurable, self-contained and self-hosted paste bin web application. It is very easy to set up and use, and will only require a few megabytes of memory and disk storage. It takes only a couple minutes to set it up, why not give it a try now?
 
-# Installation
-### Docker
-It is highly recommended that you use the official Docker image to run Pastey. To do so, simply run:
-```
-$ docker run -d -p 5000:5000 -v /path/to/local/dir:/app/data cesura/pastey:latest
-```
-Change **/path/to/local/dir** to a local folder you would like to use for persistent paste storage. It will be mounted in the container at **/app/data**.
+### Check out the Public Test Server at [pub.microbin.eu](https://pub.microbin.eu)!
 
-Pastey will then be accessible at *http://localhost:5000*
+### Or host MicroBin yourself
 
-### Docker (slim image OR non-AVX processor)
-If you're interested in a slimmer image (or your processor does not have support for AVX instructions required by Tensorflow), a slim image without language detection is also maintained:
-```
-$ docker run -d -p 5000:5000 -v /path/to/local/dir:/app/data cesura/pastey:latest-slim
+Run our quick docker setup script ([DockerHub](https://hub.docker.com/r/danielszabo99/microbin)):
+```bash
+bash <(curl -s https://microbin.eu/docker.sh)
 ```
 
-### docker-compose
-If you prefer to use docker-compose:
-```
-$ wget https://raw.githubusercontent.com/Cesura/pastey/main/docker-compose.yml && docker-compose up -d
-```
-Note that this must be modified if you wish to use a local directory for storage, rather than a Docker volume.
+Or install it manually from [Cargo](https://crates.io/crates/microbin):
 
-### Local
-#### With language detection
-Requirements:
-* Python 3.8
-* AVX-enabled processor (or a Python environment configured to use Anaconda's Tensorflow)
-
-```
-$ git clone https://github.com/Cesura/pastey.git && cd pastey && mkdir ./data
-$ pip3 install -r requirements.txt
-$ python3 app.py 
+```bash
+cargo install microbin;
+curl -L -O https://raw.githubusercontent.com/szabodanika/microbin/master/.env;
+source .env;
+microbin
 ```
 
-#### Without language detection
-If you prefer to not use the language detection feature, use the included **patch_no_tensorflow.sh** script to remove the guesslang requirements:
-```
-$ git clone https://github.com/Cesura/pastey.git && cd pastey && mkdir ./data
-$ ./patch_no_tensorflow.sh && pip3 install -r requirements.txt
-$ python3 app.py 
-```
+On our website [microbin.eu](https://microbin.eu) you will find the following:
 
-# Configuration
-Here is a list of the available configuration options:
-| Environment Variable        | config.py Variable   | Description                                                                                                                                                                                      | Default Value                                                             |
-|-----------------------------|----------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------|
-| PASTEY_DATA_DIRECTORY       | data_directory       | Local directory for paste storage                                                                                                                                                                | ./data                                                                    |
-| PASTEY_LISTEN_ADDRESS       | listen_address       | Address to listen on                                                                                                                                                                             | 0.0.0.0                                                                   |
-| PASTEY_LISTEN_PORT          | listen_port          | Port to listen on                                                                                                                                                                                | 5000                                                                      |
-| PASTEY_USE_WHITELIST        | use_whitelist        | Enable/disable whitelisting for admin tasks (view recent, delete, config)                                                                                                                        | True                                                                      |
-| PASTEY_WHITELIST_CIDR       | whitelist_cidr       | List of whitelisted IP addresses or networks (in CIDR format). When passed as an environment variable, it should be a comma-separated list.                                                      | [ '127.0.0.1/32' ,  '10.0.0.0/8' ,  '172.16.0.0/12' ,  '192.168.0.0/16' ] |
-| PASTEY_BLACKLIST_CIDR       | blacklist_cidr       | List of blocked IP addresses or networks (in CIDR format). When passed as an environment variable, it should be a comma-separated list.                                                          | []                                                                        |
-| PASTEY_RESTRICT_PASTING     | restrict_pasting     | Enable/disable restricting of pasting to whitelisted users                                                                                                                                       | False                                                                     |
-| PASTEY_RATE_LIMIT           | rate_limit           | Rate limit for pasting, for non-whitelisted users                                                                                                                                                | 5/hour                                                                    |
-| PASTEY_GUESS_THRESHOLD      | guess_threshold      | Threshold for automatic language detection guesses. If a result is below this value, it is treated as Plaintext.                                                                                 | 0.20                                                                      |
-| PASTEY_RECENT_PASTES        | recent_pastes        | Number of recent pastes to show on the home page                                                                                                                                                 | 10                                                                        |
-| PASTEY_BEHIND_PROXY         | behind_proxy         | Inform Pastey if it is behind a reverse proxy (nginx, etc.). If this is the case, it will rely on HTTP headers X-Real-IP or X-Forwarded-For. NOTE: Make sure your proxy config sets these values | False                                                                     |
-| PASTEY_DEFAULT_THEME        | default_theme        | Select which theme Pastey should use by default. This is overridden by client options.                                                                                                           | Light                                                                     |
-| PASTEY_PURGE_INTERVAL       | purge_interval       | Purge interval (in seconds) for checking expired pastes in background thread                                                                                                                     | 3600                                                                      |
-| PASTEY_FORCE_SHOW_RECENT    | force_show_recent    | Show recent pastes on the home page, even to non-whitelisted users (without delete button)                                                                                                       | False                                                                     |
-| PASTEY_IGNORE_GUESS         | ignore_guess         | Ignore these classifications for language detection                                                                                                                                              | ['TeX', 'SQL']                                                            |
-| PASTEY_SHOW_CLI_BUTTON      | show_cli_button      | Enable/disabling showing of CLI button on home page                                                                                                                                              | True                                                                      |
+- [Screenshots](https://microbin.eu/screenshots/)
+- [Guide and Documentation](https://microbin.eu/docs/intro)
+- [Donations and Sponsorships](https://microbin.eu/sponsorship)
+- [Roadmap](https://microbin.eu/roadmap)
 
-### Docker configuration
-For Docker environments, it is recommended that the options be passed to the container on startup: 
-```
-$ docker run -d -p 5000:5000 -e PASTEY_LISTEN_PORT=80 -e PASTEY_BEHIND_PROXY="True" cesura/pastey:latest
-```
+## Features
+
+- Entirely self-contained executable, MicroBin is a single file!
+- Server-side and client-side encryption
+- File uploads (eg. `server.com/file/pig-dog-cat`)
+- Raw text serving (eg. `server.com/raw/pig-dog-cat`)
+- QR code support
+- URL shortening and redirection
+- Animal names instead of random numbers for upload identifiers (64 animals)
+- SQLite and JSON database support
+- Private and public, editable and uneditable, automatically and never expiring uploads
+- Automatic dark mode and custom styling support with very little CSS and only vanilla JS (see [`water.css`](https://github.com/kognise/water.css))
+- And much more!
+
+## What is an upload?
+
+In MicroBin, an upload can be:
+
+- A text that you want to paste from one machine to another, eg. some code,
+- A file that you want to share, eg. a video that is too large for Discord, a zip with a code project in it or an image,
+- A URL redirection.
+
+## When is MicroBin useful?
+
+You can use MicroBin:
+
+- To send long texts to other people,
+- To send large files to other people,
+- To share secrets or sensitive documents securely,
+- As a URL shortener/redirect service,
+- To serve content on the web, eg. configuration files for testing, images, or any other file content using the Raw functionality,
+- To move files between your desktop and a server you access from the console,
+- As a "postbox" service where people can upload their files or texts, but they cannot see or remove what others sent you,
+- Or even to take quick notes.
+
+...and many other things, why not get creative?
+
+MicroBin and MicroBin.eu are available under the [BSD 3-Clause License](LICENSE).
+
+© Dániel Szabó 2022-2023

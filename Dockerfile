@@ -1,9 +1,41 @@
-FROM tensorflow/tensorflow:2.9.1
+FROM rust:latest as build
+
 WORKDIR /app
-COPY requirements.txt /app
-RUN mkdir -p /app/data && \
-    pip install -r /app/requirements.txt
-COPY . /app/
-EXPOSE 5000
-ENV PASTEY_DATA_DIRECTORY=/app/data  
-CMD ["python3", "app.py"]
+
+RUN \
+  DEBIAN_FRONTEND=noninteractive \
+  apt-get update &&\
+  apt-get -y install ca-certificates tzdata
+
+COPY . .
+
+RUN \
+  CARGO_NET_GIT_FETCH_WITH_CLI=true \
+  cargo build --release
+
+# https://hub.docker.com/r/bitnami/minideb
+FROM bitnami/minideb:latest
+
+# microbin will be in /app
+WORKDIR /app
+
+RUN mkdir -p /usr/share/zoneinfo
+
+# copy time zone info
+COPY --from=build \
+  /usr/share/zoneinfo \
+  /usr/share/
+
+COPY --from=build \
+  /etc/ssl/certs/ca-certificates.crt \
+  /etc/ssl/certs/ca-certificates.crt
+
+# copy built executable
+COPY --from=build \
+  /app/target/release/microbin \
+  /usr/bin/microbin
+
+# Expose webport used for the webserver to the docker runtime
+EXPOSE 8080
+
+ENTRYPOINT ["microbin"]
